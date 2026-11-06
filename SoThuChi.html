@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sổ Quản Lý Chi Tiêu Gia Đình</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter & Quicksand -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Quicksand', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        pastel: {
+                            pink: '#FFE5EC',
+                            rose: '#FB6F92',
+                            mint: '#D8F3DC',
+                            green: '#2D6A4F',
+                            lavender: '#E8DFF5',
+                            cream: '#FFF1E6',
+                            peach: '#FDE2E4',
+                            sky: '#E0F4FF',
+                            blue: '#4A90E2',
+                            warmBg: '#FAF7F5'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #FBF8F5;
+            font-family: 'Quicksand', sans-serif;
+        }
+        /* Custom scrollbar for transaction table */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F1F1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+    </style>
+</head>
+<body class="text-slate-700 antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-rose-100 shadow-sm transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+            <!-- Brand & Greeting -->
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-300 to-pink-200 flex items-center justify-center shadow-inner text-rose-600 text-2xl font-bold">
+                    <i class="fa-solid fa-house-chimney-heart"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-rose-500 to-pink-600 bg-clip-text text-transparent">
+                        Sổ Thu Chi Gia Đình
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-500 font-medium flex items-center gap-1.5">
+                        <span>👋 Xin chào Mẹ đảm đang! Chúc ngày mới ấm áp</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Month Selector & Export Action -->
+            <div class="flex items-center gap-2.5 sm:gap-3 ml-auto">
+                <div class="relative">
+                    <select id="monthFilter" onchange="changeFilterMonth()" class="appearance-none bg-rose-50 hover:bg-rose-100/70 border border-rose-200 text-rose-800 text-sm font-semibold rounded-2xl px-4 py-2.5 pr-9 cursor-pointer focus:outline-none focus:ring-2 focus:ring-rose-300 transition shadow-sm">
+                        <option value="2026-11">Tháng 11/2026</option>
+                        <option value="2026-10">Tháng 10/2026</option>
+                        <option value="2026-09">Tháng 09/2026</option>
+                        <option value="all">Toàn bộ thời gian</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-rose-500 pointer-events-none text-xs"></i>
+                </div>
+
+                <button onclick="exportToCSV()" title="Tải file dữ liệu Excel/CSV" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold px-3.5 py-2.5 rounded-2xl text-sm flex items-center gap-2 shadow-sm transition active:scale-95">
+                    <i class="fa-solid fa-file-excel text-base text-emerald-600"></i>
+                    <span class="hidden sm:inline">Xuất Excel</span>
+                </button>
+
+                <!-- Nút Mở Cài đặt / Cấu hình -->
+                <button onclick="openSettingsModal()" title="Cài đặt & Cấu hình hạng mục" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold px-3.5 py-2.5 rounded-2xl text-sm flex items-center gap-2 shadow-sm transition active:scale-95">
+                    <i class="fa-solid fa-gear text-base animate-spin-slow"></i>
+                    <span class="hidden sm:inline">Cài Đặt</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+
+        <!-- 1. Scorecards / Thẻ thống kê tổng quan -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Tổng Thu -->
+            <div class="bg-gradient-to-br from-emerald-50 to-teal-50/70 p-5 rounded-3xl border border-emerald-100 shadow-sm relative overflow-hidden transition hover:shadow-md">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-600">Tổng Thu Nhập</span>
+                        <h2 id="totalIncomeDisplay" class="text-2xl font-bold text-emerald-800 mt-1">0 đ</h2>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 text-xl shadow-inner">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-emerald-600/90 mt-3 flex items-center gap-1 font-semibold">
+                    <i class="fa-solid fa-circle-check text-xs"></i> Lương, tiền trực & thu ngoài
+                </p>
+            </div>
+
+            <!-- Tổng Chi -->
+            <div class="bg-gradient-to-br from-rose-50 to-pink-50/70 p-5 rounded-3xl border border-rose-100 shadow-sm relative overflow-hidden transition hover:shadow-md">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-rose-600">Tổng Chi Tiêu</span>
+                        <h2 id="totalExpenseDisplay" class="text-2xl font-bold text-rose-700 mt-1">0 đ</h2>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 text-xl shadow-inner">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-rose-500/90 mt-3 flex items-center gap-1 font-semibold">
+                    <i class="fa-solid fa-receipt text-xs"></i> Đã thanh toán các khoản
+                </p>
+            </div>
+
+            <!-- Còn Lại / Số Dư -->
+            <div id="balanceCard" class="bg-gradient-to-br from-sky-50 to-blue-50/70 p-5 rounded-3xl border border-sky-100 shadow-sm relative overflow-hidden transition hover:shadow-md">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-sky-700">Số Dư Còn Lại</span>
+                        <h2 id="balanceDisplay" class="text-2xl font-bold text-sky-900 mt-1">0 đ</h2>
+                    </div>
+                    <div id="balanceIconBox" class="w-12 h-12 rounded-2xl bg-sky-100 flex items-center justify-center text-sky-600 text-xl shadow-inner">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                </div>
+                <p id="balanceNotice" class="text-xs text-sky-700 mt-3 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-shield-heart"></i> Ngân sách an toàn
+                </p>
+            </div>
+
+            <!-- Tiết Kiệm / Quỹ Phòng Hờ -->
+            <div class="bg-gradient-to-br from-purple-50 to-fuchsia-50/70 p-5 rounded-3xl border border-purple-100 shadow-sm relative overflow-hidden transition hover:shadow-md">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-purple-600">Quỹ Tích Lũy</span>
+                        <h2 id="savingsDisplay" class="text-2xl font-bold text-purple-800 mt-1">0 đ</h2>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 text-xl shadow-inner">
+                        <i class="fa-solid fa-piggy-bank"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-purple-600/90 mt-3 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-star text-xs"></i> Dành cho kế hoạch dài hạn
+                </p>
+            </div>
+        </div>
+
+        <!-- 2. Form Nhập Liệu & Dashboard Biểu Đồ (Grid 2 cột) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Cột trái: Form nhập liệu nhanh (5 cột) -->
+            <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-rose-100/80 shadow-sm">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-xl bg-rose-100 text-rose-500 flex items-center justify-center text-sm font-bold">
+                            <i class="fa-solid fa-pencil"></i>
+                        </span>
+                        <h3 class="font-bold text-lg text-slate-800">Thêm Giao Dịch Nhanh</h3>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 bg-amber-50 text-amber-700 font-medium rounded-full border border-amber-200">Dễ dùng</span>
+                </div>
+
+                <form id="transactionForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                    <!-- Chọn Loại Giao Dịch (Thu / Chi) -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Bạn vừa phát sinh khoản nào?</label>
+                        <div class="grid grid-cols-2 gap-3 p-1.5 bg-slate-100/80 rounded-2xl">
+                            <button type="button" id="btnTypeExpense" onclick="setTransactionType('expense')" 
+                                class="py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition duration-200 bg-white text-rose-600 shadow-sm">
+                                <i class="fa-solid fa-arrow-trend-down"></i> Khoản Chi Ra
+                            </button>
+                            <button type="button" id="btnTypeIncome" onclick="setTransactionType('income')" 
+                                class="py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition duration-200 text-slate-600 hover:text-emerald-700">
+                                <i class="fa-solid fa-arrow-trend-up"></i> Khoản Thu Vào
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ngày tháng & Số tiền -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1.5">Ngày thực hiện</label>
+                            <div class="relative">
+                                <input type="date" id="inputDate" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-2xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 focus:bg-white transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1.5">Số tiền (VNĐ)</label>
+                            <div class="relative">
+                                <input type="text" id="inputAmount" placeholder="VD: 250.000" required oninput="formatAmountInput(this)" class="w-full bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-2xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 focus:bg-white transition">
+                                <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₫</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chọn Hạng Mục -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Hạng mục</label>
+                        <select id="inputCategory" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-semibold rounded-2xl px-3.5 py-3 focus:outline-none focus:ring-2 focus:ring-rose-300 focus:bg-white transition">
+                            <!-- Danh mục được render động theo Thu/Chi -->
+                        </select>
+                    </div>
+
+                    <!-- Ghi chú chi tiết -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Nội dung chi tiết (Ghi chú)</label>
+                        <input type="text" id="inputDescription" placeholder="VD: Mua thịt bò, Đóng tiền điện, Tiền trực..." class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-2xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 focus:bg-white transition">
+                    </div>
+
+                    <!-- Nút Thêm Giao Dịch -->
+                    <button type="submit" id="btnSubmitForm" class="w-full bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white font-bold py-3.5 rounded-2xl shadow-md shadow-rose-200 active:scale-[0.98] transition flex items-center justify-center gap-2 text-base">
+                        <i class="fa-solid fa-plus-circle text-lg"></i>
+                        <span>Lưu Vào Sổ Chi Tiêu</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Cột phải: Bảng thống kê cơ cấu & Biểu đồ Donut (7 cột) -->
+            <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-rose-100/80 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-sm font-bold">
+                                <i class="fa-solid fa-chart-pie"></i>
+                            </span>
+                            <h3 class="font-bold text-lg text-slate-800">Cơ Cấu Chi Tiêu Trong Gia Đình</h3>
+                        </div>
+                        <span id="chartTagMonth" class="text-xs bg-slate-100 text-slate-600 font-semibold px-2.5 py-1 rounded-full">
+                            Tháng Hiện Tại
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                        <!-- Chart Canvas -->
+                        <div class="md:col-span-5 flex justify-center py-2 relative">
+                            <div class="w-48 h-48 relative">
+                                <canvas id="expenseChart"></canvas>
+                                <!-- Tỷ lệ phần trăm ở tâm tròn -->
+                                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span class="text-xs text-slate-400 font-semibold">Tỉ trọng</span>
+                                    <span id="centerTotalChi" class="text-xs font-bold text-rose-500">Chi tiêu</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Danh sách phân tích tỷ lệ -->
+                        <div class="md:col-span-7 space-y-2.5 max-h-56 overflow-y-auto pr-1" id="categoryBreakdownList">
+                            <!-- Render bằng JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lời khuyên ấm áp / Tip chi tiêu -->
+                <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-3 text-xs text-slate-500 bg-rose-50/40 p-3 rounded-2xl">
+                    <span class="text-rose-500 text-lg"><i class="fa-solid fa-heart-pulse"></i></span>
+                    <p id="moneyAdvice">Mẹo nhỏ: Duy trì chi phí <strong>Sinh hoạt cố định</strong> dưới 45% tổng thu để gia đình luôn có quỹ dự phòng an tâm.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Bảng Danh Sách Giao Dịch Chi Tiết -->
+        <div class="bg-white rounded-3xl border border-rose-100/80 shadow-sm overflow-hidden">
+            <!-- Header của Bảng -->
+            <div class="p-5 sm:p-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-sm font-bold">
+                        <i class="fa-solid fa-table-list"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800">Sổ Giao Dịch Chi Tiết</h3>
+                        <p class="text-xs text-slate-400">Danh sách các khoản thu và chi đã ghi lại</p>
+                    </div>
+                </div>
+
+                <!-- Bộ lọc Loại giao dịch (Tất cả / Thu / Chi) & Tìm kiếm -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-bold text-slate-600">
+                        <button onclick="setFilterType('all')" id="filterAll" class="px-3 py-1.5 rounded-lg bg-white shadow-sm text-slate-800 transition">Tất cả</button>
+                        <button onclick="setFilterType('expense')" id="filterExpense" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-rose-600 transition">Chỉ Tiêu</button>
+                        <button onclick="setFilterType('income')" id="filterIncome" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-emerald-600 transition">Chỉ Thu</button>
+                    </div>
+
+                    <div class="relative">
+                        <input type="text" id="searchInput" oninput="renderTransactions()" placeholder="Tìm kiếm nội dung..." class="bg-slate-50 border border-slate-200 text-xs rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-rose-200 w-36 sm:w-48">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng Dữ Liệu -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50/75 text-slate-500 text-xs uppercase font-bold tracking-wider border-b border-slate-100">
+                        <tr>
+                            <th class="py-3.5 px-4 sm:px-6">Ngày</th>
+                            <th class="py-3.5 px-4">Hạng Mục</th>
+                            <th class="py-3.5 px-4">Nội Dung Chi Tiết</th>
+                            <th class="py-3.5 px-4 text-right">Khoản Thu</th>
+                            <th class="py-3.5 px-4 text-right">Khoản Chi</th>
+                            <th class="py-3.5 px-4 sm:px-6 text-center">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody" class="divide-y divide-slate-100 text-slate-700">
+                        <!-- Render dòng giao dịch qua JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Khi không có dữ liệu -->
+            <div id="emptyState" class="hidden text-center py-12 px-4">
+                <div class="w-16 h-16 bg-rose-50 text-rose-400 rounded-3xl mx-auto flex items-center justify-center text-2xl mb-3">
+                    <i class="fa-regular fa-folder-open"></i>
+                </div>
+                <h4 class="font-bold text-slate-700">Chưa có giao dịch nào được tìm thấy</h4>
+                <p class="text-xs text-slate-400 mt-1">Hãy nhập một khoản chi hoặc khoản thu mới ở form bên trên nhé!</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-8 border-t border-slate-200/70 bg-white/70 py-4 text-center text-xs text-slate-400">
+        <p>Phần mềm Quản Lý Chi Tiêu Gia Đình 💖 Thiết kế trực quan, thông minh và an tâm cho phụ nữ gia đình.</p>
+    </footer>
+
+    <!-- Settings Modal (Bảng Cấu Hình) -->
+    <div id="settingsModal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-rose-100 overflow-hidden transform transition-all duration-300 scale-95 opacity-0 my-8" id="settingsModalBox">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-gradient-to-r from-rose-50 to-pink-50 border-b border-rose-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-md">
+                        <i class="fa-solid fa-sliders text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800">Cài Đặt & Cấu Hình</h3>
+                        <p class="text-xs text-slate-500">Tùy biến danh mục thu chi & giao diện gia đình</p>
+                    </div>
+                </div>
+                <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full text-slate-400 hover:text-slate-600 hover:bg-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex border-b border-slate-100 bg-slate-50/70 px-6 pt-3 gap-2 overflow-x-auto text-xs sm:text-sm font-bold">
+                <button onclick="switchSettingsTab('expenses')" id="tabBtnExpenses" class="py-2.5 px-4 rounded-t-2xl border-b-2 border-rose-500 text-rose-600 bg-white transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-cart-shopping"></i> Hạng Mục Chi Tiêu
+                </button>
+                <button onclick="switchSettingsTab('incomes')" id="tabBtnIncomes" class="py-2.5 px-4 rounded-t-2xl border-b-2 border-transparent text-slate-500 hover:text-emerald-600 transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-wallet"></i> Hạng Mục Thu Nhập
+                </button>
+                <button onclick="switchSettingsTab('general')" id="tabBtnGeneral" class="py-2.5 px-4 rounded-t-2xl border-b-2 border-transparent text-slate-500 hover:text-sky-600 transition flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-palette"></i> Thông Tin & Dữ Liệu
+                </button>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="p-6 max-h-[60vh] overflow-y-auto space-y-6">
+
+                <!-- TAB 1: Quản lý danh mục Chi Tiêu -->
+                <div id="tabContentExpenses" class="space-y-4">
+                    <!-- Form thêm mục chi tiêu mới -->
+                    <div class="p-4 rounded-2xl bg-rose-50/50 border border-rose-100 flex flex-wrap gap-2 items-center">
+                        <div class="flex-1 min-w-[160px]">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Tên mục chi tiêu mới</label>
+                            <input type="text" id="newExpenseName" placeholder="VD: Hiếu hỷ, Du lịch, Thú cưng..." class="w-full bg-white border border-rose-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-300">
+                        </div>
+                        <div class="w-32">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Biểu tượng</label>
+                            <select id="newExpenseIcon" class="w-full bg-white border border-rose-200 rounded-xl px-2 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-300">
+                                <option value="fa-gift">🎁 Hiếu hỷ / Quà</option>
+                                <option value="fa-plane">✈️ Du lịch</option>
+                                <option value="fa-paw">🐾 Thú cưng</option>
+                                <option value="fa-gas-pump">⛽ Xăng xe</option>
+                                <option value="fa-gamepad">🎮 Giải trí</option>
+                                <option value="fa-spa">💆 Làm đẹp</option>
+                                <option value="fa-utensils">🍽️ Ăn ngoài</option>
+                                <option value="fa-tags">🏷️ Khác</option>
+                            </select>
+                        </div>
+                        <div class="self-end">
+                            <button onclick="addNewCategory('expense')" class="bg-rose-500 hover:bg-rose-600 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition active:scale-95">
+                                <i class="fa-solid fa-plus"></i> Thêm Mục
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Danh sách mục chi hiện có -->
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Danh sách mục chi đang dùng</span>
+                        <div id="settingsExpenseList" class="space-y-2">
+                            <!-- Render bằng JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: Quản lý danh mục Thu Nhập -->
+                <div id="tabContentIncomes" class="space-y-4 hidden">
+                    <!-- Form thêm mục thu nhập mới -->
+                    <div class="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 flex flex-wrap gap-2 items-center">
+                        <div class="flex-1 min-w-[160px]">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Tên nguồn thu mới</label>
+                            <input type="text" id="newIncomeName" placeholder="VD: Thưởng tết, Bán hàng online..." class="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-300">
+                        </div>
+                        <div class="w-32">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Biểu tượng</label>
+                            <select id="newIncomeIcon" class="w-full bg-white border border-emerald-200 rounded-xl px-2 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-300">
+                                <option value="fa-award">🏆 Tiền thưởng</option>
+                                <option value="fa-shop">🛍️ Bán hàng online</option>
+                                <option value="fa-piggy-bank">🐖 Cổ tức / Lãi suất</option>
+                                <option value="fa-gift">🎁 Được tặng / Biếu</option>
+                                <option value="fa-hand-holding-dollar">💵 Tiền làm thêm</option>
+                            </select>
+                        </div>
+                        <div class="self-end">
+                            <button onclick="addNewCategory('income')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition active:scale-95">
+                                <i class="fa-solid fa-plus"></i> Thêm Mục
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Danh sách mục thu hiện có -->
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Danh sách nguồn thu đang dùng</span>
+                        <div id="settingsIncomeList" class="space-y-2">
+                            <!-- Render bằng JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: Thông tin chung & Quản lý dữ liệu -->
+                <div id="tabContentGeneral" class="space-y-5 hidden">
+                    <!-- Tùy biến tên gia đình -->
+                    <div class="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-200/70">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase">Tùy Biến Lời Chào & Tiêu Đề</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Tên Ứng Dụng</label>
+                                <input type="text" id="cfgAppTitle" value="Sổ Thu Chi Gia Đình" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-300">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Lời chào trên Header</label>
+                                <input type="text" id="cfgGreeting" value="👋 Xin chào Mẹ đảm đang! Chúc ngày mới ấm áp" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-300">
+                            </div>
+                        </div>
+                        <button onclick="saveGeneralConfig()" class="bg-rose-500 hover:bg-rose-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition active:scale-95">
+                            Lưu Lời Chào Mới
+                        </button>
+                    </div>
+
+                    <!-- Quản trị dữ liệu (Sao lưu & Khôi phục & Reset) -->
+                    <div class="p-4 bg-rose-50/50 rounded-2xl border border-rose-100 space-y-3">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase">Sao Lưu & Dữ Liệu</h4>
+                        <p class="text-xs text-slate-500">Bạn có thể tải file sao lưu để chuyển sang điện thoại hoặc máy tính khác bất kỳ lúc nào.</p>
+                        
+                        <div class="flex flex-wrap gap-2.5 pt-1">
+                            <button onclick="backupAllData()" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 shadow-sm transition active:scale-95">
+                                <i class="fa-solid fa-download text-sky-500"></i> Tải File Sao Lưu (.json)
+                            </button>
+                            
+                            <label class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 shadow-sm transition cursor-pointer active:scale-95">
+                                <i class="fa-solid fa-upload text-emerald-500"></i> Nhập Lại Dữ Liệu
+                                <input type="file" id="importFileInput" accept=".json" onchange="importDataFile(event)" class="hidden">
+                            </label>
+
+                            <button onclick="resetToInitialData()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-2 transition active:scale-95 ml-auto">
+                                <i class="fa-solid fa-arrow-rotate-left"></i> Đặt Lại Mẫu Ban Đầu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex justify-end">
+                <button onclick="closeSettingsModal()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-2xl text-xs transition active:scale-95">
+                    Đã Xong & Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Modal -->
+    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-24 opacity-0 transition-all duration-300 z-50 flex items-center gap-2.5 bg-slate-800 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg">Thao tác thành công</span>
+    </div>
+
+    <!-- JavaScript Ứng dụng -->
+    <script>
+        // Cấu hình danh mục chuẩn
+        let CATEGORIES = {
+            expense: [
+                { id: 'Sinh hoạt cố định', name: 'Sinh hoạt cố định (Điện, Nước, Nhà)', icon: 'fa-house-lock', color: '#6366F1' },
+                { id: 'Thực phẩm', name: 'Thực phẩm / Đi chợ', icon: 'fa-basket-shopping', color: '#10B981' },
+                { id: 'Học Thêm', name: 'Học phí / Học thêm', icon: 'fa-graduation-cap', color: '#F59E0B' },
+                { id: 'Thuốc', name: 'Thuốc men / Sức khỏe', icon: 'fa-notes-medical', color: '#EF4444' },
+                { id: 'Quần áo', name: 'Quần áo / Mua sắm', icon: 'fa-shirt', color: '#EC4899' },
+                { id: 'Tiết kiệm', name: 'Tiết kiệm / Tích lũy', icon: 'fa-piggy-bank', color: '#8B5CF6' },
+                { id: 'Khác', name: 'Chi khác', icon: 'fa-ellipsis', color: '#94A3B8' }
+            ],
+            income: [
+                { id: 'Lương', name: 'Lương tháng', icon: 'fa-money-bill-wave', color: '#10B981' },
+                { id: 'Thu', name: 'Thu nhập ngoài / Tiền trực', icon: 'fa-hand-holding-dollar', color: '#06B6D4' },
+                { id: 'Khác', name: 'Khoản thu khác', icon: 'fa-circle-dollar-to-slot', color: '#3B82F6' }
+            ]
+        };
+
+        // Cấu hình giao diện người dùng
+        let APP_CONFIG = {
+            title: 'Sổ Thu Chi Gia Đình',
+            greeting: '👋 Xin chào Mẹ đảm đang! Chúc ngày mới ấm áp'
+        };
+
+        // Dữ liệu ban đầu (khởi tạo dựa trên ảnh bảng tính thực tế của bạn)
+        const INITIAL_TRANSACTIONS = [
+            { id: '1', date: '2026-11-01', type: 'income', category: 'Lương', desc: 'Lương gia đình đầu tháng', amount: 3000000 },
+            { id: '2', date: '2026-11-01', type: 'expense', category: 'Sinh hoạt cố định', desc: 'Tiền nhà', amount: 680000 },
+            { id: '3', date: '2026-11-02', type: 'expense', category: 'Sinh hoạt cố định', desc: 'Điện PL', amount: 200000 },
+            { id: '4', date: '2026-11-03', type: 'expense', category: 'Khác', desc: 'Quỹ Tầng', amount: 100000 },
+            { id: '5', date: '2026-11-04', type: 'expense', category: 'Khác', desc: 'Túi', amount: 100000 },
+            { id: '6', date: '2026-11-04', type: 'expense', category: 'Thực phẩm', desc: 'Sữa', amount: 150000 },
+            { id: '7', date: '2026-11-05', type: 'expense', category: 'Khác', desc: 'Chuyển A Kha', amount: 1000000 },
+            { id: '8', date: '2026-11-05', type: 'expense', category: 'Thực phẩm', desc: 'Mua thịt bò', amount: 200000 },
+            { id: '9', date: '2026-11-06', type: 'expense', category: 'Khác', desc: 'Áo Bông', amount: 145000 },
+            { id: '10', date: '2026-11-06', type: 'expense', category: 'Khác', desc: 'Khám răng', amount: 120000 },
+            { id: '11', date: '2026-11-07', type: 'expense', category: 'Sinh hoạt cố định', desc: 'Điện A907', amount: 1100000 },
+            { id: '12', date: '2026-11-08', type: 'expense', category: 'Thực phẩm', desc: 'Thực phẩm chợ', amount: 150000 },
+            { id: '13', date: '2026-11-08', type: 'expense', category: 'Thuốc', desc: 'Thuốc bổ', amount: 80000 },
+            { id: '14', date: '2026-11-09', type: 'expense', category: 'Khác', desc: 'Đồ chơi cho con', amount: 170000 },
+            { id: '15', date: '2026-11-10', type: 'income', category: 'Thu', desc: 'Tiền trực', amount: 2400000 },
+            { id: '16', date: '2026-11-10', type: 'expense', category: 'Thực phẩm', desc: 'Hoa quả', amount: 100000 },
+            { id: '17', date: '2026-11-11', type: 'expense', category: 'Học Thêm', desc: 'Tiếng Anh cho con', amount: 2050000 },
+            { id: '18', date: '2026-11-12', type: 'expense', category: 'Sinh hoạt cố định', desc: 'Điện nhà', amount: 400000 },
+        ];
+
+        // Biến trạng thái toàn cục
+        let transactions = [];
+        let currentFormType = 'expense';
+        let currentFilterType = 'all'; // 'all', 'expense', 'income'
+        let currentMonth = '2026-11';
+        let chartInstance = null;
+
+        // Khởi động ứng dụng khi load xong trang
+        window.addEventListener('DOMContentLoaded', () => {
+            initData();
+            applyConfigToDOM();
+            initDateInput();
+            populateCategoryDropdown('expense');
+            renderApp();
+        });
+
+        // 1. Quản lý Dữ liệu LocalStorage
+        function initData() {
+            // Load giao dịch
+            const saved = localStorage.getItem('family_expenses_data_v1');
+            if (saved) {
+                try {
+                    transactions = JSON.parse(saved);
+                } catch(e) {
+                    transactions = [...INITIAL_TRANSACTIONS];
+                }
+            } else {
+                transactions = [...INITIAL_TRANSACTIONS];
+                saveToLocalStorage();
+            }
+
+            // Load cấu hình danh mục
+            const savedCats = localStorage.getItem('family_categories_v1');
+            if (savedCats) {
+                try {
+                    CATEGORIES = JSON.parse(savedCats);
+                } catch(e) {}
+            }
+
+            // Load cấu hình tiêu đề/lời chào
+            const savedCfg = localStorage.getItem('family_app_config_v1');
+            if (savedCfg) {
+                try {
+                    APP_CONFIG = JSON.parse(savedCfg);
+                } catch(e) {}
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('family_expenses_data_v1', JSON.stringify(transactions));
+        }
+
+        function saveCategoriesToStorage() {
+            localStorage.setItem('family_categories_v1', JSON.stringify(CATEGORIES));
+        }
+
+        function applyConfigToDOM() {
+            if (APP_CONFIG.title) {
+                const titleEl = document.querySelector('header h1');
+                if (titleEl) titleEl.textContent = APP_CONFIG.title;
+                const inputTitle = document.getElementById('cfgAppTitle');
+                if (inputTitle) inputTitle.value = APP_CONFIG.title;
+            }
+            if (APP_CONFIG.greeting) {
+                const greetEl = document.querySelector('header p span');
+                if (greetEl) greetEl.textContent = APP_CONFIG.greeting;
+                const inputGreeting = document.getElementById('cfgGreeting');
+                if (inputGreeting) inputGreeting.value = APP_CONFIG.greeting;
+            }
+        }
+
+        // Định dạng tiền tệ VNĐ (VD: 1.250.000 đ)
+        function formatVND(amount) {
+            return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+        }
+
+        // Tự động định dạng số tiền khi người dùng gõ phím
+        function formatAmountInput(input) {
+            let val = input.value.replace(/\D/g, '');
+            if (val === '') {
+                input.value = '';
+                return;
+            }
+            input.value = new Intl.NumberFormat('vi-VN').format(parseInt(val, 10));
+        }
+
+        function parseAmount(formatted) {
+            if (typeof formatted === 'number') return formatted;
+            return parseInt(formatted.replace(/\D/g, ''), 10) || 0;
+        }
+
+        // Đặt ngày hôm nay mặc định cho form
+        function initDateInput() {
+            const dateInput = document.getElementById('inputDate');
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        // Đổi loại Thu hoặc Chi trên Form
+        function setTransactionType(type) {
+            currentFormType = type;
+            const btnExpense = document.getElementById('btnTypeExpense');
+            const btnIncome = document.getElementById('btnTypeIncome');
+            const submitBtn = document.getElementById('btnSubmitForm');
+
+            if (type === 'expense') {
+                btnExpense.className = "py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition duration-200 bg-white text-rose-600 shadow-sm";
+                btnIncome.className = "py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition duration-200 text-slate-600 hover:text-emerald-700";
+                submitBtn.className = "w-full bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white font-bold py-3.5 rounded-2xl shadow-md shadow-rose-200 active:scale-[0.98] transition flex items-center justify-center gap-2 text-base";
+            } else {
+                btnIncome.className = "py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition duration-200 bg-white text-emerald-600 shadow-sm";
+                btnExpense.className = "py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition duration-200 text-slate-600 hover:text-rose-600";
+                submitBtn.className = "w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold py-3.5 rounded-2xl shadow-md shadow-emerald-200 active:scale-[0.98] transition flex items-center justify-center gap-2 text-base";
+            }
+
+            populateCategoryDropdown(type);
+        }
+
+        // Nạp danh sách hạng mục vào thẻ Select
+        function populateCategoryDropdown(type) {
+            const select = document.getElementById('inputCategory');
+            select.innerHTML = '';
+            const list = CATEGORIES[type] || [];
+
+            list.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = cat.name;
+                select.appendChild(opt);
+            });
+        }
+
+        // CÁC HÀM QUẢN LÝ CẤU HÌNH (SETTINGS MODAL)
+        function openSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            const box = document.getElementById('settingsModalBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                box.classList.remove('scale-95', 'opacity-0');
+                box.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            renderSettingsCategoryList();
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            const box = document.getElementById('settingsModalBox');
+            box.classList.remove('scale-100', 'opacity-100');
+            box.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        }
+
+        function switchSettingsTab(tabName) {
+            const tabs = ['expenses', 'incomes', 'general'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                const content = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if (t === tabName) {
+                    btn.className = "py-2.5 px-4 rounded-t-2xl border-b-2 border-rose-500 text-rose-600 bg-white transition flex items-center gap-2 whitespace-nowrap";
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = "py-2.5 px-4 rounded-t-2xl border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition flex items-center gap-2 whitespace-nowrap";
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+        // Hiển thị danh sách các danh mục trong Modal Cài Đặt
+        function renderSettingsCategoryList() {
+            const expContainer = document.getElementById('settingsExpenseList');
+            const incContainer = document.getElementById('settingsIncomeList');
+
+            // Render Danh mục Chi
+            expContainer.innerHTML = '';
+            CATEGORIES.expense.forEach((cat, index) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:bg-rose-50/40 transition";
+                item.innerHTML = `
+                    <div class="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                        <span class="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center text-rose-500">
+                            <i class="fa-solid ${cat.icon}"></i>
+                        </span>
+                        <span>${cat.name}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="removeCategory('expense', ${index})" title="Xóa hạng mục này" class="text-slate-400 hover:text-red-500 text-xs p-1.5 rounded-lg hover:bg-white transition">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                expContainer.appendChild(item);
+            });
+
+            // Render Danh mục Thu
+            incContainer.innerHTML = '';
+            CATEGORIES.income.forEach((cat, index) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:bg-emerald-50/40 transition";
+                item.innerHTML = `
+                    <div class="flex items-center gap-2.5 text-xs font-semibold text-slate-700">
+                        <span class="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center text-emerald-500">
+                            <i class="fa-solid ${cat.icon}"></i>
+                        </span>
+                        <span>${cat.name}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="removeCategory('income', ${index})" title="Xóa hạng mục này" class="text-slate-400 hover:text-red-500 text-xs p-1.5 rounded-lg hover:bg-white transition">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                incContainer.appendChild(item);
+            });
+        }
+
+        // Thêm hạng mục mới
+        function addNewCategory(type) {
+            const nameInput = document.getElementById(type === 'expense' ? 'newExpenseName' : 'newIncomeName');
+            const iconSelect = document.getElementById(type === 'expense' ? 'newExpenseIcon' : 'newIncomeIcon');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                showToast('Vui lòng nhập tên hạng mục!', 'error');
+                return;
+            }
+
+            // Kiểm tra trùng
+            if (CATEGORIES[type].some(c => c.id.toLowerCase() === name.toLowerCase())) {
+                showToast('Hạng mục này đã có sẵn!', 'info');
+                return;
+            }
+
+            const colors = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#14B8A6'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+            CATEGORIES[type].push({
+                id: name,
+                name: name,
+                icon: iconSelect.value,
+                color: randomColor
+            });
+
+            nameInput.value = '';
+            saveCategoriesToStorage();
+            renderSettingsCategoryList();
+            populateCategoryDropdown(currentFormType);
+            renderApp();
+            showToast(`Đã thêm hạng mục "${name}" thành công!`);
+        }
+
+        // Xóa bớt hạng mục
+        function removeCategory(type, index) {
+            if (CATEGORIES[type].length <= 1) {
+                showToast('Cần giữ lại ít nhất 1 hạng mục!', 'error');
+                return;
+            }
+            const removed = CATEGORIES[type].splice(index, 1);
+            saveCategoriesToStorage();
+            renderSettingsCategoryList();
+            populateCategoryDropdown(currentFormType);
+            renderApp();
+            showToast(`Đã xóa hạng mục "${removed[0].name}"`);
+        }
+
+        // Lưu cài đặt chung (tiêu đề, lời chào)
+        function saveGeneralConfig() {
+            const title = document.getElementById('cfgAppTitle').value.trim();
+            const greeting = document.getElementById('cfgGreeting').value.trim();
+
+            if (title) APP_CONFIG.title = title;
+            if (greeting) APP_CONFIG.greeting = greeting;
+
+            localStorage.setItem('family_app_config_v1', JSON.stringify(APP_CONFIG));
+            applyConfigToDOM();
+            showToast('Đã lưu cài đặt thông tin gia đình!');
+        }
+
+        // Sao lưu toàn bộ dữ liệu ra file JSON
+        function backupAllData() {
+            const backupPayload = {
+                transactions: transactions,
+                categories: CATEGORIES,
+                config: APP_CONFIG,
+                exportDate: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SaoLuu_ChiTieuGiaDinh_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('Đã tải xuống file sao lưu an toàn!');
+        }
+
+        // Khôi phục dữ liệu từ file JSON
+        function importDataFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.transactions && Array.isArray(data.transactions)) {
+                        transactions = data.transactions;
+                        saveToLocalStorage();
+                    }
+                    if (data.categories) {
+                        CATEGORIES = data.categories;
+                        saveCategoriesToStorage();
+                    }
+                    if (data.config) {
+                        APP_CONFIG = data.config;
+                        localStorage.setItem('family_app_config_v1', JSON.stringify(APP_CONFIG));
+                        applyConfigToDOM();
+                    }
+                    populateCategoryDropdown(currentFormType);
+                    renderApp();
+                    renderSettingsCategoryList();
+                    showToast('Khôi phục dữ liệu thành công!');
+                } catch(err) {
+                    showToast('File sao lưu không đúng định dạng!', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Đặt lại dữ liệu gốc ban đầu
+        function resetToInitialData() {
+            transactions = [...INITIAL_TRANSACTIONS];
+            saveToLocalStorage();
+            renderApp();
+            showToast('Đã khôi phục dữ liệu mẫu ban đầu!', 'info');
+        }
+
+        // Thêm giao dịch mới từ Form
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const date = document.getElementById('inputDate').value;
+            const rawAmount = document.getElementById('inputAmount').value;
+            const category = document.getElementById('inputCategory').value;
+            const desc = document.getElementById('inputDescription').value.trim() || category;
+            const amount = parseAmount(rawAmount);
+
+            if (!amount || amount <= 0) {
+                showToast('Vui lòng nhập số tiền hợp lệ lớn hơn 0', 'error');
+                return;
+            }
+
+            const newTx = {
+                id: Date.now().toString(),
+                date: date,
+                type: currentFormType,
+                category: category,
+                desc: desc,
+                amount: amount
+            };
+
+            // Thêm lên đầu danh sách
+            transactions.unshift(newTx);
+            saveToLocalStorage();
+
+            // Reset form
+            document.getElementById('inputAmount').value = '';
+            document.getElementById('inputDescription').value = '';
+
+            renderApp();
+            showToast('Đã lưu giao dịch vào sổ thành công!');
+        }
+
+        // Xóa giao dịch
+        function deleteTransaction(id) {
+            const target = transactions.find(t => t.id === id);
+            if (!target) return;
+
+            // Xóa trực tiếp mượt mà, không dùng hàm confirm/alert mặc định
+            transactions = transactions.filter(t => t.id !== id);
+            saveToLocalStorage();
+            renderApp();
+            showToast('Đã xóa giao dịch thành công!', 'info');
+        }
+
+        // Lọc giao dịch theo tháng được chọn
+        function getFilteredTransactions() {
+            return transactions.filter(t => {
+                if (currentMonth === 'all') return true;
+                return t.date.startsWith(currentMonth);
+            });
+        }
+
+        // Chuyển đổi tháng
+        function changeFilterMonth() {
+            currentMonth = document.getElementById('monthFilter').value;
+            const chartTag = document.getElementById('chartTagMonth');
+            if (currentMonth === 'all') {
+                chartTag.textContent = 'Toàn bộ';
+            } else {
+                const [year, month] = currentMonth.split('-');
+                chartTag.textContent = `Tháng ${month}/${year}`;
+            }
+            renderApp();
+        }
+
+        // Lọc theo Loại (Tất cả / Thu / Chi) ở bảng
+        function setFilterType(type) {
+            currentFilterType = type;
+            const btns = {
+                all: document.getElementById('filterAll'),
+                expense: document.getElementById('filterExpense'),
+                income: document.getElementById('filterIncome')
+            };
+
+            Object.keys(btns).forEach(key => {
+                if (key === type) {
+                    btns[key].className = "px-3 py-1.5 rounded-lg bg-white shadow-sm text-slate-800 font-bold transition";
+                } else {
+                    btns[key].className = "px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 transition";
+                }
+            });
+
+            renderTransactions();
+        }
+
+        // Vẽ lại toàn bộ giao diện
+        function renderApp() {
+            const list = getFilteredTransactions();
+
+            // Tính toán số liệu thống kê
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let totalSavings = 0;
+            const expenseByCategory = {};
+
+            list.forEach(item => {
+                if (item.type === 'income') {
+                    totalIncome += item.amount;
+                } else {
+                    totalExpense += item.amount;
+                    if (item.category === 'Tiết kiệm') {
+                        totalSavings += item.amount;
+                    }
+                    expenseByCategory[item.category] = (expenseByCategory[item.category] || 0) + item.amount;
+                }
+            });
+
+            const balance = totalIncome - totalExpense;
+
+            // Cập nhật lên Scorecards
+            document.getElementById('totalIncomeDisplay').textContent = formatVND(totalIncome);
+            document.getElementById('totalExpenseDisplay').textContent = formatVND(totalExpense);
+            document.getElementById('balanceDisplay').textContent = formatVND(balance);
+            document.getElementById('savingsDisplay').textContent = formatVND(totalSavings);
+
+            // Cảnh báo màu số dư
+            const balanceCard = document.getElementById('balanceCard');
+            const balanceDisplay = document.getElementById('balanceDisplay');
+            const balanceNotice = document.getElementById('balanceNotice');
+            const balanceIconBox = document.getElementById('balanceIconBox');
+
+            if (balance < 0) {
+                balanceCard.className = "bg-gradient-to-br from-red-50 to-rose-100/70 p-5 rounded-3xl border border-red-200 shadow-sm relative overflow-hidden transition";
+                balanceDisplay.className = "text-2xl font-bold text-red-600 mt-1";
+                balanceNotice.className = "text-xs text-red-600 mt-3 font-semibold flex items-center gap-1";
+                balanceNotice.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Chi tiêu vượt quá thu nhập tháng!';
+                balanceIconBox.className = "w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600 text-xl shadow-inner";
+            } else {
+                balanceCard.className = "bg-gradient-to-br from-sky-50 to-blue-50/70 p-5 rounded-3xl border border-sky-100 shadow-sm relative overflow-hidden transition hover:shadow-md";
+                balanceDisplay.className = "text-2xl font-bold text-sky-900 mt-1";
+                balanceNotice.className = "text-xs text-sky-700 mt-3 font-semibold flex items-center gap-1";
+                balanceNotice.innerHTML = '<i class="fa-solid fa-shield-heart"></i> Ngân sách an toàn';
+                balanceIconBox.className = "w-12 h-12 rounded-2xl bg-sky-100 flex items-center justify-center text-sky-600 text-xl shadow-inner";
+            }
+
+            // Cập nhật Biểu đồ & Bảng phân bổ
+            renderExpenseChart(expenseByCategory, totalExpense);
+            renderCategoryBreakdown(expenseByCategory, totalExpense);
+
+            // Cập nhật Sổ giao dịch
+            renderTransactions();
+        }
+
+        // Render Biểu đồ Tròn Phân Bổ Chi Tiêu (Chart.js)
+        function renderExpenseChart(dataObj, totalExpense) {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            const labels = Object.keys(dataObj);
+            const values = Object.values(dataObj);
+
+            // Danh sách màu pastel đẹp
+            const pastelColors = [
+                '#FB7185', '#38BDF8', '#4ADE80', '#FBBF24', 
+                '#A78BFA', '#F472B6', '#94A3B8', '#34D399'
+            ];
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            if (values.length === 0 || totalExpense === 0) {
+                // Biểu đồ rỗng mẫu
+                chartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Chưa có khoản chi'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#E2E8F0'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        cutout: '72%',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false }
+                        }
+                    }
+                });
+                return;
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: pastelColors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: '#FFFFFF',
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    cutout: '72%',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw || 0;
+                                    const percent = ((val / totalExpense) * 100).toFixed(1);
+                                    return ` ${context.label}: ${formatVND(val)} (${percent}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render Bảng tỷ lệ phần trăm các danh mục
+        function renderCategoryBreakdown(dataObj, totalExpense) {
+            const container = document.getElementById('categoryBreakdownList');
+            container.innerHTML = '';
+
+            const entries = Object.entries(dataObj).sort((a, b) => b[1] - a[1]);
+
+            if (entries.length === 0 || totalExpense === 0) {
+                container.innerHTML = `
+                    <div class="py-6 text-center text-xs text-slate-400">
+                        Chưa có dữ liệu chi tiêu trong tháng này.
+                    </div>
+                `;
+                return;
+            }
+
+            entries.forEach(([categoryName, amount]) => {
+                const percent = ((amount / totalExpense) * 100).toFixed(1);
+                const catInfo = CATEGORIES.expense.find(c => c.id === categoryName) || { icon: 'fa-tag', color: '#94A3B8' };
+
+                const row = document.createElement('div');
+                row.className = 'space-y-1';
+                row.innerHTML = `
+                    <div class="flex justify-between items-center text-xs">
+                        <div class="flex items-center gap-1.5 font-semibold text-slate-700">
+                            <i class="fa-solid ${catInfo.icon} text-slate-400 w-4 text-center"></i>
+                            <span>${categoryName}</span>
+                        </div>
+                        <div class="font-bold text-slate-800">
+                            ${formatVND(amount)}
+                            <span class="text-xs text-slate-400 font-normal ml-1">(${percent}%)</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500" style="width: ${percent}%; background-color: ${catInfo.color}"></div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // Render Sổ Giao Dịch
+        function renderTransactions() {
+            const tbody = document.getElementById('transactionTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const searchKeyword = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+
+            tbody.innerHTML = '';
+            let list = getFilteredTransactions();
+
+            // Lọc theo loại
+            if (currentFilterType !== 'all') {
+                list = list.filter(t => t.type === currentFilterType);
+            }
+
+            // Lọc theo từ khóa tìm kiếm
+            if (searchKeyword) {
+                list = list.filter(t => 
+                    (t.desc && t.desc.toLowerCase().includes(searchKeyword)) ||
+                    (t.category && t.category.toLowerCase().includes(searchKeyword))
+                );
+            }
+
+            if (list.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            list.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-rose-50/30 transition group border-b border-slate-100";
+
+                // Format ngày DD/MM
+                const [year, month, day] = item.date.split('-');
+                const formattedDate = `${day}/${month}/${year}`;
+
+                const isIncome = item.type === 'income';
+                const catInfo = (isIncome ? CATEGORIES.income : CATEGORIES.expense).find(c => c.id === item.category) || { icon: 'fa-tags', color: '#64748B' };
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 sm:px-6 whitespace-nowrap text-xs font-semibold text-slate-500">
+                        ${formattedDate}
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold ${isIncome ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-700'}">
+                            <i class="fa-solid ${catInfo.icon} text-xs"></i>
+                            ${item.category}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-xs font-medium text-slate-800 max-w-xs truncate" title="${item.desc}">
+                        ${item.desc}
+                    </td>
+                    <td class="py-3 px-4 text-right whitespace-nowrap font-bold text-xs ${isIncome ? 'text-emerald-600' : 'text-slate-300'}">
+                        ${isIncome ? '+' + formatVND(item.amount) : '-'}
+                    </td>
+                    <td class="py-3 px-4 text-right whitespace-nowrap font-bold text-xs ${!isIncome ? 'text-rose-600' : 'text-slate-300'}">
+                        ${!isIncome ? '-' + formatVND(item.amount) : '-'}
+                    </td>
+                    <td class="py-3 px-4 sm:px-6 text-center whitespace-nowrap">
+                        <button onclick="deleteTransaction('${item.id}')" title="Xóa giao dịch này" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition inline-flex items-center justify-center">
+                            <i class="fa-regular fa-trash-can text-sm"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Xuất file CSV (Tương thích với Microsoft Excel)
+        function exportToCSV() {
+            if (transactions.length === 0) {
+                showToast('Chưa có dữ liệu để xuất file', 'error');
+                return;
+            }
+
+            let csvContent = '\uFEFF'; // Thêm BOM để Excel mở tiếng Việt không bị lỗi font
+            csvContent += "Ngày,Loại Giao Dịch,Hạng Mục,Chi Tiết,Khoản Thu (VNĐ),Khoản Chi (VNĐ)\n";
+
+            transactions.forEach(t => {
+                const typeText = t.type === 'income' ? 'Thu' : 'Chi';
+                const thu = t.type === 'income' ? t.amount : 0;
+                const chi = t.type === 'expense' ? t.amount : 0;
+                const descClean = `"${(t.desc || '').replace(/"/g, '""')}"`;
+                csvContent += `${t.date},${typeText},${t.category},${descClean},${thu},${chi}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `So_Thu_Chi_Gia_Dinh_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('Đã tải xuống file Excel/CSV thành công!');
+        }
+
+        // Thông báo Toast dịu mắt thay cho alert()
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toastMsg');
+            const iconEl = document.getElementById('toastIcon');
+
+            msgEl.textContent = message;
+
+            if (type === 'error') {
+                iconEl.className = 'fa-solid fa-circle-exclamation text-rose-400';
+            } else if (type === 'info') {
+                iconEl.className = 'fa-solid fa-circle-info text-sky-400';
+            } else {
+                iconEl.className = 'fa-solid fa-circle-check text-emerald-400';
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
